@@ -1,0 +1,10 @@
+# output directories
+/bin
+/build
+/lib
+/utils/lib
+/utils/build
+
+# msvc
+.vs
+*.vcxproj.user
