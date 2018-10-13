@@ -18,7 +18,10 @@
     <ClCompile Include="..\..\..\src\test\PlayerRankingDB.Tests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\utils\unittest\googletest\src\gtest_main.cc">
+    <ClCompile Include="..\..\..\src\test\PersistentRedBlackTree.Tests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\test\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

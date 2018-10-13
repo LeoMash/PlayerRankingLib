@@ -3,17 +3,32 @@
 #define _PLAYER_RANKING_DB_H_
 
 #include <string>
+#include <vector>
 
 
 class PlayerRankingDB {
 public:
-   PlayerRankingDB(void) = default;
+   PlayerRankingDB(void);
+   ~PlayerRankingDB();
 
    void RegisterPlayerResult(std::string playerName, int playerRating);
-   void UnregisterPlayer(std::string playerName);
-   
-   int GetPlayerRank(std::string playerName) const;
-   int Rollback(int step);
+   void UnregisterPlayer(const std::string& playerName);
+   void Rollback(int step);
+
+   int GetPlayerRank(const std::string& playerName) const;
+
+   struct PlayerInfoRow {
+      std::string name;
+      int         rating;
+      int         ranking;
+
+      bool operator==(std::string_view _name) const { return name == _name; }
+   };
+   std::vector<PlayerInfoRow> GetPlayersInfo(void) const;
+
+private:
+   struct Impl;
+   std::unique_ptr<Impl> impl;
 };
 
 
