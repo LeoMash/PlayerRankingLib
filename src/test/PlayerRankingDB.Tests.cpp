@@ -12,19 +12,6 @@ TEST(PlayerRatingsTest, Empty)
 }
 
 
-TEST(PlayerRatingsTest, SingleRegister)
-{
-   PlayerRankingDB db;
-   db.RegisterPlayerResult("A", 100);
-   
-   auto rows = db.GetPlayersInfo();
-   ASSERT_EQ(1, rows.size());
-   
-   auto playerInfo = std::find(rows.begin(), rows.end(), "A");
-   ASSERT_NE(rows.end(), playerInfo);
-   ASSERT_EQ(100, playerInfo->rating);
-}
-
 using PlayerRegistrationInfo = std::pair<std::string, int>;
 enum class DBOperationType {
    REGISTER,
@@ -67,7 +54,7 @@ protected:
 };
 
 
-class PlayerRatingsTest_InitialSetup 
+class PlayerRatingsTest_InitialSetup_P 
    : public PlayerRatingsTest_InitialSetupBase
    , public ::testing::WithParamInterface<std::vector<DBOperation>> {
 protected:
@@ -79,7 +66,7 @@ protected:
 };
 
 
-TEST_P(PlayerRatingsTest_InitialSetup, MultipleRegister)
+TEST_P(PlayerRatingsTest_InitialSetup_P, MultipleRegister)
 {
    auto rows = db->GetPlayersInfo();
    ASSERT_EQ(dbInitialSetup.size(), rows.size());
@@ -104,11 +91,11 @@ const std::vector<DBOperation> _playerRegistrationLists[] = {
    },
 };
 INSTANTIATE_TEST_CASE_P(Default, 
-   PlayerRatingsTest_InitialSetup,
+   PlayerRatingsTest_InitialSetup_P,
    ::testing::ValuesIn(_playerRegistrationLists));
 
 
-class PlayerRatings_RollbackCount_P 
+class PlayerRatingsTest_RollbackCount_P 
    : public PlayerRatingsTest_InitialSetupBase
    , public ::testing::WithParamInterface<int> {
 protected:
@@ -119,14 +106,14 @@ protected:
          { PlayerRegistrationInfo{"B", 75} },
          { PlayerRegistrationInfo{"C", 300} },
          { PlayerRegistrationInfo{"D", 15} },
-      },
+      };
 
       PlayerRatingsTest_InitialSetupBase::SetUp();
    }
-
 };
 
-TEST_P(PlayerRatings_RollbackCount_P, RollbackInserts)
+
+TEST_P(PlayerRatingsTest_RollbackCount_P, RollbackInserts)
 {
    int numRollback = GetParam();
    db->Rollback(numRollback);
@@ -144,7 +131,8 @@ TEST_P(PlayerRatings_RollbackCount_P, RollbackInserts)
    }
 }
 
-TEST_P(PlayerRatings_RollbackCount_P, RollbackRemoves)
+
+TEST_P(PlayerRatingsTest_RollbackCount_P, RollbackRemoves)
 {
    // unregister all registered players
    for (const auto& regOp: dbInitialSetup) {
@@ -168,7 +156,84 @@ TEST_P(PlayerRatings_RollbackCount_P, RollbackRemoves)
    }
 }
 
+
+TEST_P(PlayerRatingsTest_RollbackCount_P, Rankings)
+{
+   int numRollback = GetParam();
+   db->Rollback(numRollback);
+
+   const int A_Ranks[] = { 2, 2, 1, 1, 0 };
+   EXPECT_EQ(A_Ranks[numRollback], db->GetPlayerRank("A"));
+   const int B_Ranks[] = { 3, 3, 2, 0, 0 };
+   EXPECT_EQ(B_Ranks[numRollback], db->GetPlayerRank("B"));
+   const int C_Ranks[] = { 1, 1, 0, 0, 0 };
+   EXPECT_EQ(C_Ranks[numRollback], db->GetPlayerRank("C"));
+   const int D_Ranks[] = { 4, 0, 0, 0, 0 };
+   EXPECT_EQ(D_Ranks[numRollback], db->GetPlayerRank("D"));
+}
+
+
 INSTANTIATE_TEST_CASE_P(Default,
-   PlayerRatings_RollbackCount_P,
+   PlayerRatingsTest_RollbackCount_P,
    ::testing::Range(0, 4)
 );
+
+
+class PlayerRatingsTest_RepeatedRatings
+   : public PlayerRatingsTest_InitialSetupBase {
+protected:
+   void SetUp() override
+   {
+      dbInitialSetup = {
+         { PlayerRegistrationInfo{"A", 100} },
+         { PlayerRegistrationInfo{"B", 75} },
+         { PlayerRegistrationInfo{"C", 100} },
+         { PlayerRegistrationInfo{"D", 15} },
+      };
+
+      PlayerRatingsTest_InitialSetupBase::SetUp();
+   }
+
+};
+
+
+TEST_F(PlayerRatingsTest_RepeatedRatings, BasicCheck)
+{
+   EXPECT_EQ(1, db->GetPlayerRank("A"));
+   EXPECT_EQ(3, db->GetPlayerRank("B"));
+   EXPECT_EQ(1, db->GetPlayerRank("C"));
+   EXPECT_EQ(4, db->GetPlayerRank("D"));
+}
+
+
+TEST_F(PlayerRatingsTest_RepeatedRatings, RollbackNonUnique)
+{
+   db->Rollback(2);
+
+   EXPECT_EQ(1, db->GetPlayerRank("A"));
+   EXPECT_EQ(2, db->GetPlayerRank("B"));
+   EXPECT_EQ(0, db->GetPlayerRank("C"));
+   EXPECT_EQ(0, db->GetPlayerRank("D"));
+}
+
+
+TEST_F(PlayerRatingsTest_RepeatedRatings, UnregisterUnique)
+{
+   db->UnregisterPlayer("B");
+
+   EXPECT_EQ(1, db->GetPlayerRank("A"));
+   EXPECT_EQ(0, db->GetPlayerRank("B"));
+   EXPECT_EQ(1, db->GetPlayerRank("C"));
+   EXPECT_EQ(3, db->GetPlayerRank("D"));
+}
+
+
+TEST_F(PlayerRatingsTest_RepeatedRatings, UnregisterNonUnique)
+{
+   db->UnregisterPlayer("C");
+
+   EXPECT_EQ(1, db->GetPlayerRank("A"));
+   EXPECT_EQ(2, db->GetPlayerRank("B"));
+   EXPECT_EQ(0, db->GetPlayerRank("C"));
+   EXPECT_EQ(3, db->GetPlayerRank("D"));
+}
