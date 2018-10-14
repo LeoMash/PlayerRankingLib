@@ -21,5 +21,8 @@
     <ClCompile Include="..\..\..\src\benchmark\PlayerRanking.Benchmark.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\benchmark\PersistentRedBlackTree.Benchmark.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
