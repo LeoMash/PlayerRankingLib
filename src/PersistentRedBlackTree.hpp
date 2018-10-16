@@ -5,9 +5,9 @@
 
 
 
-template <typename Key, typename Val, typename Less>
+template <typename Key, typename Val, typename Less, template <typename> class NodeMakerT>
 template <typename K, typename V>
-PersistentRedBlackTree<Key, Val, Less> PersistentRedBlackTree<Key, Val, Less>::insert (K&& key, V&& value) const
+PersistentRedBlackTree<Key, Val, Less, NodeMakerT> PersistentRedBlackTree<Key, Val, Less, NodeMakerT>::insert (K&& key, V&& value) const
 {
    auto[mb_new_root, is_new_key] = insert(root, std::forward<K>(key), std::forward<V>(value));
    auto   new_root = cloneNodeAsBlack(mb_new_root);
@@ -17,9 +17,9 @@ PersistentRedBlackTree<Key, Val, Less> PersistentRedBlackTree<Key, Val, Less>::i
 }
 
 
-template <typename Key, typename Val, typename Less>
+template <typename Key, typename Val, typename Less, template <typename> class NodeMakerT>
 template <typename K>
-PersistentRedBlackTree<Key, Val, Less> PersistentRedBlackTree<Key, Val, Less>::remove (const K& key) const
+PersistentRedBlackTree<Key, Val, Less, NodeMakerT> PersistentRedBlackTree<Key, Val, Less, NodeMakerT>::remove (const K& key) const
 {
    auto[mb_new_root, removed] = remove(root, key);
    if (!removed) {
@@ -31,9 +31,9 @@ PersistentRedBlackTree<Key, Val, Less> PersistentRedBlackTree<Key, Val, Less>::r
 }
 
 
-template <typename Key, typename Val, typename Less>
+template <typename Key, typename Val, typename Less, template <typename> class NodeMakerT>
 template <typename K>
-auto PersistentRedBlackTree<Key, Val, Less>::get (const K& key, const lookup_move_cb& lookupCallback) const -> std::optional<entry_type>
+auto PersistentRedBlackTree<Key, Val, Less, NodeMakerT>::get (const K& key, const lookup_move_cb& lookupCallback) const -> std::optional<Entry>
 {
    auto cur = root;
    while (cur) {
@@ -43,14 +43,12 @@ auto PersistentRedBlackTree<Key, Val, Less>::get (const K& key, const lookup_mov
             lookupCallback(*cur->entry, true);
          }
          cur = cur->left;
-      }
-      else if (lessPred(cur_key, key)) {
+      } else if (lessPred(cur_key, key)) {
          if (lookupCallback) {
             lookupCallback(*cur->entry, false);
          }
          cur = cur->right;
-      }
-      else {
+      } else {
          return *cur->entry;
       }
    }
@@ -58,8 +56,8 @@ auto PersistentRedBlackTree<Key, Val, Less>::get (const K& key, const lookup_mov
 }
 
 
-template <typename Key, typename Val, typename Less>
-auto PersistentRedBlackTree<Key, Val, Less>::balance(const node_ptr_type& node) const -> node_ptr_type
+template <typename Key, typename Val, typename Less, template <typename> class NodeMakerT>
+auto PersistentRedBlackTree<Key, Val, Less, NodeMakerT>::balance(const NodePtr& node) const -> NodePtr
 {
    assert(node->isBlack());
 
@@ -75,8 +73,8 @@ auto PersistentRedBlackTree<Key, Val, Less>::balance(const node_ptr_type& node) 
 
    // case (Some(R), _, _, Opt(B), _, _) - only left child is red
    if (isNodeRed(node->left)) {
-      const node_ptr_type& l_l = node->left->left;
-      const node_ptr_type& l_r = node->left->right;
+      const NodePtr& l_l = node->left->left;
+      const NodePtr& l_r = node->left->right;
 
       // case: (Some(R), Some(R), _, ...)
       if (isNodeRed(l_l)) {
@@ -97,8 +95,8 @@ auto PersistentRedBlackTree<Key, Val, Less>::balance(const node_ptr_type& node) 
 
    // case (Opt(B), _, _, Some(R), _, _) - only right child is red
    if (isNodeRed(node->right)) {
-      const node_ptr_type& r_l = node->right->left;
-      const node_ptr_type& r_r = node->right->right;
+      const NodePtr& r_l = node->right->left;
+      const NodePtr& r_r = node->right->right;
 
       // case: (..., Some(R), Some(R), _)
       if (isNodeRed(r_l)) {
@@ -122,9 +120,9 @@ auto PersistentRedBlackTree<Key, Val, Less>::balance(const node_ptr_type& node) 
 }
 
 
-template <typename Key, typename Val, typename Less>
+template <typename Key, typename Val, typename Less, template <typename> class NodeMakerT>
 template <typename K, typename V>
-auto PersistentRedBlackTree<Key, Val, Less>::insert(const node_ptr_type& node, K&& key, V&& value) const -> std::pair<node_ptr_type, bool>
+auto PersistentRedBlackTree<Key, Val, Less, NodeMakerT>::insert(const NodePtr& node, K&& key, V&& value) const -> std::pair<NodePtr, bool>
 {
    if (node) {
       const key_type& node_key = node->key();
@@ -135,23 +133,23 @@ auto PersistentRedBlackTree<Key, Val, Less>::insert(const node_ptr_type& node, K
          return insertRight(node, std::forward<K>(key), std::forward<V>(value));
       }
       // key == node->key
-      entry_ptr_type new_entry = makeEntry(std::forward<K>(key), std::forward<V>(value));
-      node_ptr_type new_node = cloneNodeWithNewEntry(node, new_entry);
+      EntryPtr new_entry = makeEntry(std::forward<K>(key), std::forward<V>(value));
+      NodePtr new_node = cloneNodeWithNewEntry(node, new_entry);
       return std::make_pair(new_node, false);
    }
 
-   entry_ptr_type new_entry = makeEntry(std::forward<K>(key), std::forward<V>(value));
-   node_ptr_type new_node = makeNodeRed(new_entry, nullptr, nullptr);
+   EntryPtr new_entry = makeEntry(std::forward<K>(key), std::forward<V>(value));
+   NodePtr new_node = makeNodeRed(new_entry, nullptr, nullptr);
    return std::make_pair(new_node, true);
 }
 
 
-template <typename Key, typename Val, typename Less>
+template <typename Key, typename Val, typename Less, template <typename> class NodeMakerT>
 template <typename K, typename V>
-auto PersistentRedBlackTree<Key, Val, Less>::insertLeft(const node_ptr_type& node, K&& key, V&& value) const -> std::pair<node_ptr_type, bool>
+auto PersistentRedBlackTree<Key, Val, Less, NodeMakerT>::insertLeft(const NodePtr& node, K&& key, V&& value) const -> std::pair<NodePtr, bool>
 {
    auto[new_left, is_new_key] = insert(node->left, std::forward<K>(key), std::forward<V>(value));
-   node_ptr_type new_node = cloneNodeWithNewLeft(node, new_left);
+   NodePtr new_node = cloneNodeWithNewLeft(node, new_left);
 
    if (is_new_key && new_node->isBlack()) {
       auto balanced_new_node = balance(new_node);
@@ -162,12 +160,12 @@ auto PersistentRedBlackTree<Key, Val, Less>::insertLeft(const node_ptr_type& nod
 }
 
 
-template <typename Key, typename Val, typename Less>
+template <typename Key, typename Val, typename Less, template <typename> class NodeMakerT>
 template <typename K, typename V>
-auto PersistentRedBlackTree<Key, Val, Less>::insertRight(const node_ptr_type& node, K&& key, V&& value) const -> std::pair<node_ptr_type, bool>
+auto PersistentRedBlackTree<Key, Val, Less, NodeMakerT>::insertRight(const NodePtr& node, K&& key, V&& value) const -> std::pair<NodePtr, bool>
 {
    auto[new_right, is_new_key] = insert(node->right, std::forward<K>(key), std::forward<V>(value));
-   node_ptr_type new_node = cloneNodeWithNewRight(node, new_right);
+   NodePtr new_node = cloneNodeWithNewRight(node, new_right);
 
    if (is_new_key && new_node->isBlack()) {
       auto balanced_new_node = balance(new_node);
@@ -178,8 +176,8 @@ auto PersistentRedBlackTree<Key, Val, Less>::insertRight(const node_ptr_type& no
 }
 
 
-template <typename Key, typename Val, typename Less>
-auto PersistentRedBlackTree<Key, Val, Less>::fuse(const node_ptr_type& left, const node_ptr_type& right) const -> node_ptr_type
+template <typename Key, typename Val, typename Less, template <typename> class NodeMakerT>
+auto PersistentRedBlackTree<Key, Val, Less, NodeMakerT>::fuse(const NodePtr& left, const NodePtr& right) const -> NodePtr
 {
    // match: (left, right)
    // case: (None, r)
@@ -240,8 +238,8 @@ auto PersistentRedBlackTree<Key, Val, Less>::fuse(const node_ptr_type& left, con
 }
 
 
-template <typename Key, typename Val, typename Less>
-auto PersistentRedBlackTree<Key, Val, Less>::balanceRemoveLeft(const node_ptr_type& node) const -> node_ptr_type
+template <typename Key, typename Val, typename Less, template <typename> class NodeMakerT>
+auto PersistentRedBlackTree<Key, Val, Less, NodeMakerT>::balanceRemoveLeft(const NodePtr& node) const -> NodePtr
 {
    // match: (color_l, color_r, color_r_l)
    // case: (Some(R), ..)
@@ -272,8 +270,8 @@ auto PersistentRedBlackTree<Key, Val, Less>::balanceRemoveLeft(const node_ptr_ty
 }
 
 
-template <typename Key, typename Val, typename Less>
-auto PersistentRedBlackTree<Key, Val, Less>::balanceRemoveRight(const node_ptr_type& node) const -> node_ptr_type
+template <typename Key, typename Val, typename Less, template <typename> class NodeMakerT>
+auto PersistentRedBlackTree<Key, Val, Less, NodeMakerT>::balanceRemoveRight(const NodePtr& node) const -> NodePtr
 {
    // match: (color_l, color_l_r, color_r)
    // case: (.., Some(R))
@@ -305,9 +303,9 @@ auto PersistentRedBlackTree<Key, Val, Less>::balanceRemoveRight(const node_ptr_t
 }
 
 
-template <typename Key, typename Val, typename Less>
+template <typename Key, typename Val, typename Less, template <typename> class NodeMakerT>
 template <typename K>
-auto PersistentRedBlackTree<Key, Val, Less>::remove(const node_ptr_type& node, const K& key) const -> std::pair<node_ptr_type, bool>
+auto PersistentRedBlackTree<Key, Val, Less, NodeMakerT>::remove(const NodePtr& node, const K& key) const -> std::pair<NodePtr, bool>
 {
    if (node) {
       const key_type& node_key = node->key();
@@ -326,9 +324,9 @@ auto PersistentRedBlackTree<Key, Val, Less>::remove(const node_ptr_type& node, c
 }
 
 
-template <typename Key, typename Val, typename Less>
+template <typename Key, typename Val, typename Less, template <typename> class NodeMakerT>
 template <typename K>
-auto PersistentRedBlackTree<Key, Val, Less>::removeLeft(const node_ptr_type& node, const K& key) const -> std::pair<node_ptr_type, bool>
+auto PersistentRedBlackTree<Key, Val, Less, NodeMakerT>::removeLeft(const NodePtr& node, const K& key) const -> std::pair<NodePtr, bool>
 {
    auto[new_left, removed] = remove(node->left, key);
 
@@ -348,9 +346,9 @@ auto PersistentRedBlackTree<Key, Val, Less>::removeLeft(const node_ptr_type& nod
 }
 
 
-template <typename Key, typename Val, typename Less>
+template <typename Key, typename Val, typename Less, template <typename> class NodeMakerT>
 template <typename K>
-auto PersistentRedBlackTree<Key, Val, Less>::removeRight(const node_ptr_type& node, const K& key) const -> std::pair<node_ptr_type, bool>
+auto PersistentRedBlackTree<Key, Val, Less, NodeMakerT>::removeRight(const NodePtr& node, const K& key) const -> std::pair<NodePtr, bool>
 {
    auto[new_right, removed] = remove(node->right, key);
 
@@ -370,8 +368,8 @@ auto PersistentRedBlackTree<Key, Val, Less>::removeRight(const node_ptr_type& no
 }
 
 
-template <typename Key, typename Val, typename Less>
-size_t PersistentRedBlackTree<Key, Val, Less>::getBlackHeight(const node_ptr_type& node)
+template <typename Key, typename Val, typename Less, template <typename> class NodeMakerT>
+size_t PersistentRedBlackTree<Key, Val, Less, NodeMakerT>::getBlackHeight(const NodePtr& node)
 {
    if (!node) {
       // nil node has black height of 1
@@ -416,18 +414,17 @@ size_t PersistentRedBlackTree<Key, Val, Less>::getBlackHeight(const node_ptr_typ
 
 
 
-template <typename Key, typename Val, typename Less>
-auto PersistentRedBlackTree<Key, Val, Less>::toMap () const -> std::map<key_type, mapped_type>
+template <typename Key, typename Val, typename Less, template <typename> class NodeMakerT>
+auto PersistentRedBlackTree<Key, Val, Less, NodeMakerT>::toMap () const -> std::map<key_type, mapped_type>
 {
    std::map<key_type, mapped_type> out;
    auto                            node = root;
-   auto                            s = std::stack<node_ptr_type>();
+   auto                            s = std::stack<NodePtr>();
    while (!s.empty() || node) {
       if (node) {
          s.push(node);
          node = node->left;
-      }
-      else {
+      } else {
          node = s.top();
          s.pop();
          out.emplace(node->entry->first, node->entry->second);

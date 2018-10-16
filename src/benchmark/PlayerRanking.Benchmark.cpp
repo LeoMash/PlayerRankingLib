@@ -99,12 +99,12 @@ static void PlayerRankingBench_RollbackSize(benchmark::State& state)
    state.SetComplexityN(state.range(0));
 }
 
-BENCHMARK(PlayerRankingBench_RollbackSize)->RangeMultiplier(8)->Range(1 << 4, 1 << 16)->Complexity(benchmark::oLogN);
+BENCHMARK(PlayerRankingBench_RollbackSize)->RangeMultiplier(8)->Range(1 << 4, 1 << 16)->Complexity(benchmark::o1);
 
 static void PlayerRankingBench_RollbackStep(benchmark::State& state)
 {
    // generate test data
-   const int N = 1 << 16;
+   const int N = 1 << 10;
    const int steps = (int)state.range(0);
 
    PlayerRankingDB db;
@@ -127,4 +127,4 @@ static void PlayerRankingBench_RollbackStep(benchmark::State& state)
    state.SetComplexityN(state.range(0));
 }
 
-BENCHMARK(PlayerRankingBench_RollbackStep)->RangeMultiplier(2)->Range(1, 1<<10)->Complexity(benchmark::oN);
+BENCHMARK(PlayerRankingBench_RollbackStep)->RangeMultiplier(2)->Range(1, 1 << 5)->Complexity(benchmark::o1);
